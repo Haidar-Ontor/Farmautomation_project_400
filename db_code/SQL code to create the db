@@ -1,1 +1,65 @@
+-- Create Database
+CREATE DATABASE farmauto_farmautomation400;
+
+-- Use the Database
+USE farmauto_farmautomation400;
+
+-- Create Control Table
+CREATE TABLE control (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    Date DATE NOT NULL,
+    Time TIME NOT NULL,
+    Humidifier TINYINT(1) NOT NULL,
+    Pump_G TINYINT(1) NOT NULL,
+    Light_G TINYINT(1) NOT NULL,
+    Fan_G TINYINT(1) NOT NULL,
+    Door_G TINYINT(1) NOT NULL,
+    Heater_G TINYINT(1) NOT NULL,
+    G_mode TINYINT(1) NOT NULL,
+    Pump_f1 TINYINT(1) NOT NULL,
+    Pump_f2 TINYINT(1) NOT NULL,
+    Pump_f3 TINYINT(1) NOT NULL,
+    Pump_Pond TINYINT(1) NOT NULL,
+    FP_mode TINYINT(1) NOT NULL,
+    C_mode TINYINT(1) NOT NULL,
+    C_Light TINYINT(1) NOT NULL,
+    C_Fan TINYINT(1) NOT NULL,
+    C_Pump TINYINT(1) NOT NULL,
+    C_Gate TINYINT(1) NOT NULL
+);
+
+-- Create Device_Status Table
+CREATE TABLE device_status (
+    device_id INT PRIMARY KEY,
+    last_ping_date DATE NOT NULL,
+    last_ping_time TIME NOT NULL
+);
+
+-- Create Sensor_Reading Table
+CREATE TABLE sensor_reading (
+    Date DATE NOT NULL,
+    Time TIME NOT NULL,
+    G_Temp FLOAT NOT NULL,
+    G_Light FLOAT NOT NULL,
+    G_Humidity FLOAT NOT NULL,
+    G_Moisture FLOAT NOT NULL,
+    C_Temp FLOAT NOT NULL,
+    C_Humidity FLOAT NOT NULL,
+    C_Light FLOAT NOT NULL,
+    C_WaterL FLOAT NOT NULL,
+    F1_SoilM FLOAT NOT NULL,
+    F2_SoilM FLOAT NOT NULL,
+    F3_SoilM FLOAT NOT NULL,
+    Pond_Water_Level FLOAT NOT NULL,
+    Device_ID INT NOT NULL,
+    FOREIGN KEY (Device_ID) REFERENCES device_status(device_id)
+);
+
+-- Create Sensor_Trigger_Values Table
+CREATE TABLE sensor_trigger_values (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    sensor_name VARCHAR(50) NOT NULL,
+    min_value FLOAT NOT NULL,
+    max_value FLOAT NOT NULL
+);
 
