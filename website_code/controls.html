@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Panel</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+        header {
+            background-color: #333;
+            color: white;
+            padding: 15px 0;
+            text-align: center;
+        }
+        header h1 {
+            margin: 0;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            padding: 5px;
+        }
+        main {
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .box {
+            flex: 1;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            background-color: #f9f9f9;
+        }
+        .icon {
+            margin-right: 10px;
+        }
+        .status-on {
+            background-color: green;
+        }
+        .status-off {
+            background-color: red;
+        }
+        .status-na {
+            background-color: #696969;
+        }
+        .sub-nav {
+            display: flex;
+            justify-content: center;
+            background-color: #555;
+            margin-top: 10px;
+            padding: 10px 0;
+        }
+        .sub-nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        button {
+            width: 150px;
+            height: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 25px;
+            color: white;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+            outline: none;
+        }
+        @media (max-width: 768px) {
+            .container {
+                gap: 10px;
+            }
+        }
+        
+        
+        #device-status-container {
+    text-align: center;
+    font-weight: bold;
+    
+    margin-bottom: 20px;
+}
+        
+        
+
+   
+        
+    </style>
+</head>
+<body>
+<header>
+    <h1>Control Panel</h1>
+    <nav>
+        <a href="index.html">Dashboard</a>
+        <a href="controls.html">Control Panel</a>
+        <a href="logs.html">Logs</a>
+    </nav>
+</header>
+<main>
+    <div class="sub-nav">
+        <a href="controls.html">Greenhouse</a>
+        <a href="cattle_house.html">Cattle House</a>
+        <a href="fields_pond.html">Fields and Pond</a>
+        <a href="sensor_trigger.html">Set Sensor Trigger Value</a>
+    </div>
+    <h1 style="text-align: center;">Greenhouse</h1>
+    
+         <div id="device-status-container">
+        <p>Device Status: <span id="device-1-status">Loading...</span></p>
+        <p>Time Since Last Ping: <span id="device-1-ping-time">Loading...</span></p>
+    </div>
+    
+    
+    <div class="container" id="Greenhouse">
+        <div class="box">
+            <div id="sensor-readings">
+                <p><i class="fas fa-calendar icon"></i>Date: <span id="date">Loading...</span></p>
+                <p><i class="fas fa-clock icon"></i>Time: <span id="time">Loading...</span></p>
+                <p><i class="fas fa-sun icon"></i>Light: <span id="light">Loading...</span></p>
+                <p><i class="fas fa-thermometer-half icon"></i>Temperature: <span id="temperature">Loading...</span></p>
+                <p><i class="fas fa-tint icon"></i>Humidity: <span id="humidity">Loading...</span></p>
+                <p><i class="fas fa-water icon"></i>Soil Moisture: <span id="soilMoisture">Loading...</span></p>
+            </div>
+        </div>
+        <div class="box" id="second-box">
+            <div id="controls">
+                <h2>Current Operating Mode</h2>
+                <button id="Mode-toggle" class="status-na">Manual Mode</button>
+                <h2>Controls</h2>
+                <button id="Humidifier-toggle" class="status-na">Toggle Humidifier</button>
+                <button id="Water-pump-toggle" class="status-na">Toggle Water Pump</button>
+                <button id="Light-toggle" class="status-na">Toggle Light</button>
+                <button id="Fan-toggle" class="status-na">Toggle Fan</button>
+                <button id="Door-toggle" class="status-na">Toggle Door</button>
+                <button id="Heater-toggle" class="status-na">Toggle Heater</button>
+                <p>Switch to Manual Mode to Manually control the devices</p>
+            </div>
+        </div>
+    </div>
+</main>
+<script>
+   
+    document.addEventListener('DOMContentLoaded', function() {
+        const sensorReadingsDiv = document.getElementById('sensor-readings');
+        const controlStatusTime = document.getElementById('control-status-time');
+        const sensorApiEndpoint = 'https://farmautomation400.site/sensor_data.php';
+        const statusApiEndpoint = 'https://farmautomation400.site/get_device_status.php';
+        const controlEndpoint = 'https://farmautomation400.site/control.php';
+         const pingApiEndpoint = 'https://farmautomation400.site/ping.php';
+         
+        const statusElements = {
+            Humidifier: document.getElementById('Humidifier-toggle'),
+            Pump_G: document.getElementById('Water-pump-toggle'),
+            Light_G: document.getElementById('Light-toggle'),
+            Fan_G: document.getElementById('Fan-toggle'),
+            Door_G: document.getElementById('Door-toggle'),
+            Heater_G: document.getElementById('Heater-toggle'),
+            G_mode: document.getElementById('Mode-toggle')
+        };
+
+        function fetchSensorData() {
+            console.log('Fetching sensor data from:', sensorApiEndpoint);
+            fetch(sensorApiEndpoint)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    sensorReadingsDiv.innerHTML = `
+                        <h2>Sensor Reading</h2>
+                        <p><i class="fas fa-calendar icon"></i>Date: ${data.date}</p>
+                        <p><i class="fas fa-clock icon"></i>Time: ${data.time}</p>
+                        <p><i class="fas fa-sun icon"></i>Light: ${data.light} lux</p>
+                        <p><i class="fas fa-thermometer-half icon"></i>Temperature: ${data.temperature} &deg;C</p>
+                        <p><i class="fas fa-tint icon"></i>Humidity: ${data.humidity}%</p>
+                        <p><i class="fas fa-water icon"></i>Soil Moisture: ${data.soilMoisture}%</p>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error fetching sensor data:', error);
+                    sensorReadingsDiv.innerHTML = `<p>Error fetching sensor data. Please try again later.</p>`;
+                });
+        }
+        
+        
+        
+         function fetchDevicePingStatus() {
+        fetch(pingApiEndpoint)
+            .then(response => response.json())
+            .then(data => {
+                const device1 = data.find(device => device.device_id === "1");
+                if (device1) {
+                    document.getElementById('device-1-status').textContent = device1.status;
+                    document.getElementById('device-1-ping-time').textContent = device1.time_since_last_ping;
+                } else {
+                    document.getElementById('device-1-status').textContent = 'Unknown';
+                    document.getElementById('device-1-ping-time').textContent = 'N/A';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching device ping status:', error);
+                document.getElementById('device-1-status').textContent = 'Error';
+                document.getElementById('device-1-ping-time').textContent = 'Error';
+            });
+    }
+
+    fetchDevicePingStatus(); // Fetch initially
+    setInterval(fetchDevicePingStatus, 100); 
+        
+
+        function fetchDeviceStatus() {
+            console.log('Fetching device status from:', statusApiEndpoint);
+            fetch(statusApiEndpoint)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const latestStatuses = {
+                        Humidifier: data.Humidifier,
+                        Pump_G: data.WaterPump,
+                        Light_G: data.Light,
+                        Fan_G: data.Fan,
+                        Door_G: data.Door,
+                        Heater_G: data.Heater,
+                        G_mode: data.G_mode
+                    };
+
+                    for (let device in statusElements) {
+                        const statusElement = statusElements[device];
+                        const status = latestStatuses[device];
+
+                        if (device === 'G_mode') {
+                            if (status === 'off') {
+                                statusElement.classList.remove('status-on', 'status-na');
+                                statusElement.classList.add('status-off');
+                                statusElement.textContent = 'Auto'; // Display "Auto" when Mode is auto
+                                toggleControlButtons(true);
+                            } else if (status === 'on') {
+                                statusElement.classList.remove('status-off', 'status-na');
+                                statusElement.classList.add('status-on');
+                                statusElement.textContent = 'Manual'; // Display "Manual" when Mode is manual
+                                toggleControlButtons(false);
+                            } else {
+                                statusElement.classList.remove('status-on', 'status-off');
+                                statusElement.classList.add('status-na');
+                                statusElement.textContent = 'Error';
+                                toggleControlButtons(false);
+                            }
+                        } else {
+                            if (status === 'on') {
+                                statusElement.classList.remove('status-off', 'status-na');
+                                statusElement.classList.add('status-on');
+                                statusElement.textContent = `${device.replace('_', ' ')} On`;
+                            } else if (status === 'off') {
+                                statusElement.classList.remove('status-on', 'status-na');
+                                statusElement.classList.add('status-off');
+                                statusElement.textContent = `${device.replace('_', ' ')} Off`;
+                            } else {
+                                statusElement.classList.remove('status-on', 'status-off');
+                                statusElement.classList.add('status-na');
+                                statusElement.textContent = `${device.replace('_', ' ')} Error`;
+                            }
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching device status:', error);
+                    controlStatusTime.innerHTML = `<p>Error fetching device status. Please try again later.</p>`;
+                });
+        }
+
+        function toggleControlButtons(disable) {
+            const buttons = document.querySelectorAll('#controls button:not(#Mode-toggle)');
+            buttons.forEach(button => {
+                button.disabled = disable;
+            });
+        }
+
+        function sendControlCommand(command) {
+            console.log('Sending control command:', command);
+            fetch(controlEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(command)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                fetchDeviceStatus();
+            })
+            .catch(error => {
+                console.error('Error sending control command:', error);
+            });
+        }
+
+        document.getElementById('Mode-toggle').addEventListener('click', () => {
+            sendControlCommand({ device: 'G_mode', action: 'toggle' });
+        });
+
+        document.getElementById('Humidifier-toggle').addEventListener('click', () => {
+            sendControlCommand({ device: 'Humidifier', action: 'toggle' });
+        });
+
+        document.getElementById('Water-pump-toggle').addEventListener('click', () => {
+            sendControlCommand({ device: 'Pump_G', action: 'toggle' });
+        });
+
+        document.getElementById('Light-toggle').addEventListener('click', () => {
+            sendControlCommand({ device: 'Light_G', action: 'toggle' });
+        });
+
+        document.getElementById('Fan-toggle').addEventListener('click', () => {
+            sendControlCommand({ device: 'Fan_G', action: 'toggle' });
+        });
+
+        document.getElementById('Door-toggle').addEventListener('click', () => {
+            sendControlCommand({ device: 'Door_G', action: 'toggle' });
+        });
+
+        document.getElementById('Heater-toggle').addEventListener('click', () => {
+            sendControlCommand({ device: 'Heater_G', action: 'toggle' });
+        });
+
+        fetchSensorData();
+        fetchDeviceStatus();
+        setInterval(fetchSensorData, 3000);
+        setInterval(fetchDeviceStatus, 3000);
+    });
+</script>
+</body>
+</html>

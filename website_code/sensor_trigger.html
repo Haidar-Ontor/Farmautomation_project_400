@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Sensor Trigger Values</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .current-values {
+            margin-bottom: 20px;
+        }
+
+        .current-values p {
+            margin: 5px 0;
+        }
+        
+         .sub-nav {
+            display: flex;
+            justify-content: center;
+            background-color: #555;
+            margin-top: 10px;
+            padding: 10px 0;
+        }
+        .sub-nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Update Sensor Trigger Values</h1>
+        <nav>
+            <a href="index.html">Dashboard</a>
+            <a href="controls.html">Control Panel</a>
+            <a href="logs.html">Logs</a>
+        </nav>
+        
+         <div class="sub-nav">
+        <a href="controls.html">Greenhouse</a>
+        <a href="cattle_house.html">Cattle House</a>
+        <a href="fields_pond.html">Fields and Pond</a>
+        <a href="sensor_trigger.html">Set Sensor Trigger Value</a>
+    </div>
+    </header>
+
+        <h1>Sensor Control Panel</h1>
+        <table id="sensorTable">
+            <thead>
+                <tr>
+                    <th>Sensor Name</th>
+                    <th>Min Value</th>
+                    <th>Max Value</th>
+                    <th>Update</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Sensor rows will be dynamically inserted here -->
+            </tbody>
+        </table>
+    </body>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchSensorData();
+
+        async function fetchSensorData() {
+            const response = await fetch('fetch_sensor.php');
+            const sensors = await response.json();
+            const tbody = document.querySelector('#sensorTable tbody');
+            tbody.innerHTML = '';
+            sensors.forEach(sensor => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${sensor.sensor_name}</td>
+                    <td><input type="number" value="${sensor.min_value}" data-sensor-id="${sensor.id}" data-type="min"></td>
+                    <td><input type="number" value="${sensor.max_value}" data-sensor-id="${sensor.id}" data-type="max"></td>
+                    <td><button onclick="updateValues(${sensor.id})">Update</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        window.updateValues = async function(id) {
+            const minInput = document.querySelector(`input[data-sensor-id="${id}"][data-type="min"]`);
+            const maxInput = document.querySelector(`input[data-sensor-id="${id}"][data-type="max"]`);
+            const minValue = minInput.value;
+            const maxValue = maxInput.value;
+
+            const response = await fetch('update_sensor.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ id, minValue, maxValue })
+            });
+
+            if (response.ok) {
+                alert('Values updated successfully');
+                fetchSensorData();
+            } else {
+                alert('Failed to update values');
+            }
+        };
+    });
+    </script>
+</html>

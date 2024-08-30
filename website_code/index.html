@@ -1,1 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farm Automation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Global styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333; /* Default text color */
+        }
 
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 10px 0;
+            text-align: center;
+        }
+
+        nav a {
+            color: #fff;
+            margin: 0 15px;
+            text-decoration: none;
+        }
+
+        main {
+            padding: 20px;
+        }
+
+        footer {
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            padding: 10px 0;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+
+        /* Specific section styles */
+        section {
+            background: #fff;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: #333; /* Darker text color */
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: #555; /* Darker secondary text color */
+        }
+
+        .weather-card, .forecast-container {
+            margin-top: 10px;
+        }
+
+        .weather-info {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+
+        .weather-info p {
+            flex: 1 1 45%;
+            margin-bottom: 10px;
+        }
+
+        .weather-icon {
+            margin-right: 10px;
+        }
+
+        .forecast-container {
+            display: flex;
+            flex-wrap: wrap;
+
+        }
+
+        .forecast-item {
+            width: calc(33.33% - 20px); /* Adjust the width as per your design preference */
+            padding: 10x;
+            margin: 10px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .forecast-item p {
+            margin-bottom: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .forecast-item {
+                width: calc(50% - 20px); /* Adjust for smaller screens */
+            }
+
+            .weather-info p {
+                flex: 1 1 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .forecast-item {
+                width: calc(100% - 20px); /* Adjust for smallest screens */
+            }
+        }
+        
+        .time-date-container {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+    color: #333;
+}
+
+#date {
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+#time {
+    font-size: 1.6rem;
+    font-weight: bold;
+}
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Farm Dashboard</h1>
+        <nav>
+            <a href="index.html">Dashboard</a>
+            <a href="controls.html">Controls</a>
+            
+            <a href="logs.html">Logs</a>
+        
+        </nav>
+    </header>
+    <main>
+        <section>
+             <div id="current-time" class="time-date-container">
+    <div id="date"></div>
+    <div id="time"></div>
+</div>
+
+            
+            <h2>Overall View</h2>
+            <div id="overview">
+                <h3>Current Weather in Sylhet</h3>
+                <div id="weather-data">
+                    <p>Loading weather data...</p>
+                </div>
+            </div>
+            <div id="forecast">
+                <h3>Weather Forecast</h3>
+                <div id="weekly-forecast" class="forecast-container">
+                    <!-- Forecast items will be dynamically added here -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const apiKey = 'cee405c8312347557a44ff2e3f6cb368';
+            const city = 'Sylhet';
+            const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
+            const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`;
+
+
+// show time and date 
+function updateTime() {
+    const now = new Date();
+    const optionsDate = {
+        timeZone: 'Asia/Dhaka',
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    };
+    const optionsTime = {
+        timeZone: 'Asia/Dhaka',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+    };
+    const date = new Intl.DateTimeFormat('en-GB', optionsDate).format(now);
+    const time = new Intl.DateTimeFormat('en-GB', optionsTime).format(now);
+    document.getElementById('date').textContent = date;
+    document.getElementById('time').textContent = time;
+}
+setInterval(updateTime, 1000); // Update time every second
+updateTime(); // Initial call to set the time immediately
+
+
+            // Fetch current weather data
+            fetch(weatherUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const weatherDataDiv = document.getElementById('weather-data');
+                    const weatherDescription = data.weather[0].description;
+                    const temperature = data.main.temp;
+                    const humidity = data.main.humidity;
+                    const windSpeed = data.wind.speed * 3.6; // Convert m/s to km/h
+                    const windDirection = data.wind.deg; // Wind direction in degrees
+                   
+
+                    const weatherIcon = getWeatherIcon(weatherDescription);
+
+                    weatherDataDiv.innerHTML = `
+                        <p><i class="${weatherIcon} weather-icon"></i>Weather: ${weatherDescription}</p>
+                        <p><i class="fas fa-thermometer-half weather-icon"></i>Temperature: ${temperature} &deg;C</p>
+                        <p><i class="fas fa-tint weather-icon"></i>Humidity: ${humidity}%</p>
+                        <p><i class="fas fa-wind weather-icon"></i>Wind Speed: ${windSpeed.toFixed(1)} km/h</p>
+                        <p><i class="fas fa-location-arrow weather-icon"></i>Wind Direction: ${getWindDirection(windDirection)}</p>
+                  
+                        
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error fetching weather data:', error);
+                    document.getElementById('weather-data').innerHTML = `<p>Error fetching weather data. Please try again later.</p>`;
+                });
+
+            // Fetch weather forecast data
+            fetch(forecastUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const weeklyForecastDiv = document.getElementById('weekly-forecast');
+                    let forecastHTML = '';
+
+                    // Iterate through forecast data (every 24 hours)
+                    for (let i = 0; i < data.list.length; i += 8) { // Retrieves forecast for every 24 hours
+                        const forecast = data.list[i];
+                        const date = new Date(forecast.dt * 1000); // Convert timestamp to Date object
+                        const day = date.toLocaleDateString('en-US', { weekday: 'long' });
+                        const weatherDescription = forecast.weather[0].description;
+                        const temperature = forecast.main.temp;
+                        const tempMin = forecast.main.temp_min;
+                        const tempMax = forecast.main.temp_max;
+                        const precipitation = forecast.pop * 100; // Probability of precipitation (%)
+                        const windSpeed = forecast.wind.speed * 3.6; // Wind speed in km/h
+                        const windDirection = forecast.wind.deg; // Wind direction in degrees
+
+                        const weatherIcon = getWeatherIcon(weatherDescription);
+
+                        forecastHTML += `
+                            <div class="forecast-item">
+                                <h4>${day}</h4>
+                                <p><i class="${weatherIcon} weather-icon"></i>${weatherDescription}</p>
+                                <p>Max: ${tempMax.toFixed(1)} &deg;C</p>
+                                <p>Min: ${tempMin.toFixed(1)} &deg;C</p>
+                                <p>Precipitation: ${precipitation.toFixed(0)}%</p>
+                                <p>Wind Speed: ${windSpeed.toFixed(1)} km/h</p>
+                                <p>Wind Direction: ${getWindDirection(windDirection)}</p>
+                            </div>
+                        `;
+                    }
+
+                    weeklyForecastDiv.innerHTML = forecastHTML;
+                })
+                .catch(error => {
+                    console.error('Error fetching forecast data:', error);
+                    document.getElementById('weekly-forecast').innerHTML = `<p>Error fetching forecast data. Please try again later.</p>`;
+                });
+
+            // Function to get appropriate weather icon
+            function getWeatherIcon(weatherDescription) {
+                const weatherIcons = {
+                    'clear sky': 'fas fa-sun',
+                    'few clouds': 'fas fa-cloud-sun',
+                    'scattered clouds': 'fas fa-cloud',
+                    'broken clouds': 'fas fa-cloud',
+                    'shower rain': 'fas fa-cloud-showers-heavy',
+                    'rain': 'fas fa-cloud-rain',
+                    'thunderstorm': 'fas fa-bolt',
+                    'snow': 'fas fa-snowflake',
+                    'mist': 'fas fa-smog'
+                };
+                return weatherIcons[weatherDescription.toLowerCase()] || 'fas fa-cloud';
+            }
+
+            // Function to get wind direction based on degree
+            function getWindDirection(degrees) {
+                const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+                const index = Math.round((degrees % 360) / 45);
+                return directions[index];
+            }
+        });
+    </script>
+</body>
+</html>

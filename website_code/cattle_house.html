@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cattle House</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+
+        header {
+            background-color: #333;
+            color: white;
+            padding: 15px 0;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 5;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            padding: 5px;
+        }
+
+        main {
+            padding: 20px;
+        }
+
+        .container {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .box {
+            flex: 1;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            background-color: #f9f9f9;
+        }
+
+        .icon {
+            margin-right: 10px;
+        }
+
+        .status-on {
+            background-color: green;
+        }
+
+        .status-off {
+            background-color: red;
+        }
+
+        .status-na {
+            background-color: #696969;
+        }
+        
+        .sub-nav {
+            display: flex;
+            justify-content: center;
+            background-color: #555;
+            margin-top: 10px;
+            padding: 10px 0;
+        }
+
+        .sub-nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        button {
+            width: 150px;
+            height: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 25px;
+            color: white;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+            outline: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                gap: 10px;
+            }
+        }
+        
+              
+        #device-status-container {
+    text-align: center;
+    font-weight: bold;
+    
+    margin-bottom: 20px;
+}
+        
+    </style>
+</head>
+<body>
+<header>
+    <h1>Cattle House</h1>
+    <nav>
+        <a href="index.html">Dashboard</a>
+        <a href="controls.html">Control Panel</a>
+        <a href="logs.html">Logs</a>
+    </nav>
+</header>
+<main>
+    <div class="sub-nav">
+        <a href="controls.html">Greenhouse</a>
+        <a href="cattle_house.html">Cattle House</a>
+        <a href="fields_pond.html">Fields & Pond</a>
+       
+        <a href="sensor_trigger.html">Set Sensor trigger value</a>
+    </div>
+    
+    <h1 style="text-align: center;">Cattle House</h1>
+    
+     <div id="device-status-container">
+        <p>Device Status: <span id="device-2-status">Loading...</span></p>
+        <p>Time Since Last Ping: <span id="device-2-ping-time">Loading...</span></p>
+    </div>
+    
+    <div class="container" id="fields-pond">
+
+        <div class="box">
+            <div id="sensor-readings">
+                <p><i class="fas fa-calendar icon"></i>Date: <span id="date">Loading...</span></p>
+                <p><i class="fas fa-clock icon"></i>Time: <span id="time">Loading...</span></p>
+                <p><i class="fas fa-tint icon"></i>Humidity: <span id="Humidity">Loading...</span></p>
+                <p><i class="fas fa-water icon"></i>Water Level: <span id="water-level">Loading...</span></p>
+                <p><i class="fas fa-sun icon"></i>Light: <span id="light">Loading...</span></p>
+                <p><i class="fas fa-thermometer-half icon"></i>Temperature: <span id="temperature">Loading...</span></p>
+            </div>
+        </div>
+
+        <div class="box" id="second-box">
+            <div id="controls">
+                <button id="Cmode-toggle" class="status-na">C_Mode</button>
+                <h2>Controls</h2>
+                <button id="Clight-toggle" class="status-na">Toggle Light</button>
+                <button id="Cfan-toggle" class="status-na">Toggle Fan</button>
+                <button id="Cpump-toggle" class="status-na">Toggle Pump</button>
+                <button id="Cgate-toggle" class="status-na">Toggle Cattle House Gate</button>
+                <p>Switch to Manual Mode to Manually control the devices</p>
+               
+            </div>
+        </div>
+
+    </div>
+</main>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const sensorReadingsDiv = document.getElementById('sensor-readings');
+        const controlStatusTime = document.getElementById('control-status-time'); // added this line
+        const sensorApiEndpoint = 'https://farmautomation400.site/sensor_data.php';
+        const statusApiEndpoint = 'https://farmautomation400.site/get_device_status.php';
+        const controlEndpoint = 'https://farmautomation400.site/control.php';
+         const pingApiEndpoint = 'https://farmautomation400.site/ping.php';
+        function fetchSensorData() {
+            console.log('Fetching sensor data from:', sensorApiEndpoint);
+            fetch(sensorApiEndpoint)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    sensorReadingsDiv.innerHTML = `
+                        <h2>Sensor Reading</h2>
+                        <p><i class="fas fa-calendar icon"></i>Date: ${data.date}</p>
+                        <p><i class="fas fa-clock icon"></i>Time: ${data.time}</p>
+                       <p><i class="fas fa-tint icon"></i>Humidity: ${data.C_Humidity}%</p>
+                      <p><i class="fas fa-water icon"></i>Water Level: ${data.C_WaterL}%</p>
+                        <p><i class="fas fa-sun icon"></i>Light: ${data.C_Light}</p>
+                <p><i class="fas fa-thermometer-half icon"></i>Temperature: ${data.C_Temp}&deg;C</p>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error fetching sensor data:', error);
+                    sensorReadingsDiv.innerHTML = `<p>Error fetching sensor data. Please try again later.</p>`;
+                });
+        }
+        
+        
+             function fetchDevicePingStatus() {
+        fetch(pingApiEndpoint)
+            .then(response => response.json())
+            .then(data => {
+                const device2 = data.find(device => device.device_id === "2");
+                if (device2) {
+                    document.getElementById('device-2-status').textContent = device2.status;
+                    document.getElementById('device-2-ping-time').textContent = device2.time_since_last_ping;
+                } else {
+                    document.getElementById('device-2-status').textContent = 'Unknown';
+                    document.getElementById('device-2-ping-time').textContent = 'N/A';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching device ping status:', error);
+                document.getElementById('device-2-status').textContent = 'Error';
+                document.getElementById('device-2-ping-time').textContent = 'Error';
+            });
+    }
+
+    fetchDevicePingStatus(); // Fetch initially
+    setInterval(fetchDevicePingStatus, 100); 
+        
+        
+
+        function fetchDeviceStatus() {
+            console.log('Fetching device status from:', statusApiEndpoint);
+            fetch(statusApiEndpoint)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const statusElements = {
+                        C_Light: document.getElementById('Clight-toggle'),
+                        C_Fan: document.getElementById('Cfan-toggle'),
+                        C_Pump: document.getElementById('Cpump-toggle'),
+                        C_Gate: document.getElementById('Cgate-toggle'),
+                        C_mode: document.getElementById('Cmode-toggle')
+                    };
+
+
+                    const latestStatuses = {
+                        C_Light: data.C_Light,
+                        C_Fan: data.C_Fan,
+                        C_Pump: data.C_Pump,
+                        C_Gate: data.C_Gate,
+                        C_mode: data.C_mode
+                    };
+
+                    for (let device in statusElements) {
+                        if (device === 'C_mode') {
+                            if (latestStatuses[device] === 'off') {
+                                statusElements[device].classList.remove('status-on', 'status-na');
+                                statusElements[device].classList.add('status-off');
+                                statusElements[device].textContent = 'Auto'; // Display "Auto" when F_mode is off
+                                toggleControlButtons(true);
+                            } else if (latestStatuses[device] === 'on') {
+                                statusElements[device].classList.remove('status-off', 'status-na');
+                                statusElements[device].classList.add('status-on');
+                                statusElements[device].textContent = 'Manual'; // Display "Manual" when F_mode is on
+                                toggleControlButtons(false);
+                            } else {
+                                statusElements[device].classList.remove('status-on', 'status-off');
+                                statusElements[device].classList.add('status-na');
+                                statusElements[device].textContent = 'Error';
+                                toggleControlButtons(false);
+                            }
+                        } else {
+                            if (latestStatuses[device] === 'on') {
+                                statusElements[device].classList.remove('status-off', 'status-na');
+                                statusElements[device].classList.add('status-on');
+                                statusElements[device].textContent = `${device.replace('_', ' ')} On`;
+                            } else if (latestStatuses[device] === 'off') {
+                                statusElements[device].classList.remove('status-on', 'status-na');
+                                statusElements[device].classList.add('status-off');
+                                statusElements[device].textContent = `${device.replace('_', ' ')} Off`;
+                            } else {
+                                statusElements[device].classList.remove('status-on', 'status-off');
+                                statusElements[device].classList.add('status-na');
+                                statusElements[device].textContent = `${device.replace('_', ' ')} Error`;
+                            }
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching device status:', error);
+                    controlStatusTime.innerHTML = `<p>Error fetching device status. Please try again later.</p>`;
+                });
+        }
+        
+        function toggleControlButtons(disable) {
+            const buttons = document.querySelectorAll('#controls button:not(#Cmode-toggle)');
+            buttons.forEach(button => {
+                button.disabled = disable;
+            });
+        }
+
+        function sendControlCommand(command) {
+            console.log('Sending control command:', command);
+            fetch(controlEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(command)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                fetchDeviceStatus();
+            })
+            .catch(error => {
+                console.error('Error sending control command:', error);
+            });
+        }
+
+        document.getElementById('Cmode-toggle').addEventListener('click', () => {
+            sendControlCommand({ device: 'C_mode', action: 'toggle' });
+        });
+
+        document.getElementById('Clight-toggle').addEventListener('click', () => {
+            sendControlCommand({ device: 'C_Light', action: 'toggle' });
+        });
+
+        document.getElementById('Cfan-toggle').addEventListener('click', () => {
+            sendControlCommand({ device: 'C_Fan', action: 'toggle' });
+        });
+
+        document.getElementById('Cpump-toggle').addEventListener('click', () => {
+            sendControlCommand({ device: 'C_Pump', action: 'toggle' });
+        });
+
+        document.getElementById('Cgate-toggle').addEventListener('click', () => {
+            sendControlCommand({ device: 'C_Gate', action: 'toggle' });
+        });
+
+        fetchSensorData();
+        fetchDeviceStatus();
+    });
+
+
+</script>
+</body>
+</html>
