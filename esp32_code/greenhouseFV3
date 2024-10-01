@@ -1,0 +1,271 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
+#include <DHT.h>
+#include <LiquidCrystal_I2C.h>
+#include <Wire.h>
+
+// WiFi credentials
+// const char* ssid = "TOTOLINK_N300RT";
+// const char* password = "bohubrihi";
+
+const char* ssid = "Rx7700";
+ const char* password = "haider51";
+
+// Server endpoints
+const char* sensorDataUrl = "https://farmautomation400.site/sensor_data.php";
+const char* controlCommandUrl = "https://farmautomation400.site/control.php";
+const char* serverUrl = "https://farmautomation400.site/ping.php";
+const char* controlUpdateUrl = "https://farmautomation400.site/update_control.php";
+
+// Pin definitions
+#define DHTPIN 32
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+const int soilMoisturePin = 34;  // Soil moisture sensor
+const int lightPin = 36;         // Light sensor
+
+const int pumpPin = 13;          // Pump for Greenhouse
+const int fanPin = 5;            // Fan for Greenhouse
+const int lightControlPin = 4;   // Light for Greenhouse
+const int doorPin = 21;          // Door for Greenhouse
+const int heaterPin = 19;        // Heater for Greenhouse
+const int humidifierPin = 12;
+
+const int device_id = 1;
+
+void setup() {
+  Serial.begin(115200);
+  connectWiFi();
+
+  // Initialize sensors and LCD
+  dht.begin();
+  lcd.init();
+  lcd.backlight();
+
+  // Initialize control pins
+  pinMode(pumpPin, OUTPUT);
+  pinMode(fanPin, OUTPUT);
+  pinMode(lightControlPin, OUTPUT);
+  pinMode(doorPin, OUTPUT);
+  pinMode(heaterPin, OUTPUT);
+pinMode(humidifierPin, OUTPUT);
+  // Connect to WiFi
+}
+
+void loop() {
+  if (WiFi.status() == WL_CONNECTED) {
+    sendSensorData();
+    fetchControlCommands();
+    sendPing();
+    sendControlStatus();
+  }
+  delay(5000);  // Adjust the delay as needed
+}
+
+void sendSensorData() {
+  // Read sensor data
+  float temperature = dht.readTemperature();
+  float humidity = dht.readHumidity();
+  int soilMoisture = analogRead(soilMoisturePin);
+  int lightLevel = analogRead(lightPin);
+
+  // Create JSON object
+  DynamicJsonDocument jsonDoc(256);
+  jsonDoc["G_Temp"] = temperature;
+  jsonDoc["G_Humidity"] = humidity;
+  jsonDoc["G_Moisture"] = soilMoisture;
+  jsonDoc["G_Light"] = lightLevel;
+
+  // Convert JSON object to string
+  String jsonString;
+  serializeJson(jsonDoc, jsonString);
+
+  // Send data to server
+  HTTPClient http;
+  http.begin(sensorDataUrl);
+  http.addHeader("Content-Type", "application/json");
+
+  int httpResponseCode = http.POST(jsonString);
+  if (httpResponseCode > 0) {
+    String response = http.getString();
+    Serial.println(jsonString);
+    Serial.print("Sensor data sent, response: ");
+    Serial.println(response);
+  } else {
+    Serial.printf("Failed to send sensor data, error: %s\n", http.errorToString(httpResponseCode).c_str());
+  }
+  http.end();
+}
+
+void fetchControlCommands() {
+  HTTPClient http;
+  http.begin(controlCommandUrl);
+  int httpResponseCode = http.GET();
+
+  if (httpResponseCode > 0) {
+    String response = http.getString();
+    Serial.print("Control command response: ");
+    Serial.println(response);
+
+    DynamicJsonDocument jsonDoc(512);
+    DeserializationError error = deserializeJson(jsonDoc, response);
+    if (error) {
+      Serial.printf("Failed to parse JSON, error: %s\n", error.c_str());
+      return;
+    }
+
+    int G_mode = jsonDoc["G_mode"];
+
+    // Greenhouse control based on G_mode
+    if (G_mode == 1) {
+      controlManualMode(jsonDoc);  // Manual control for Greenhouse
+    } else {
+      controlAutoMode();  // Auto control for Greenhouse
+    }
+
+  } else {
+    Serial.printf("Failed to fetch control commands, error: %s\n", http.errorToString(httpResponseCode).c_str());
+  }
+  http.end();
+}
+
+void sendPing() {
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    String url = String(serverUrl) + "?device_id=" + String(device_id) + "&action=ping";
+
+    http.begin(url);
+    int httpResponseCode = http.GET();
+
+    if (httpResponseCode > 0) {
+      String response = http.getString();
+      Serial.println("Ping Response: " + response);
+    } else {
+      Serial.println("Error in HTTP request: " + String(httpResponseCode));
+    }
+
+    http.end();
+  } else {
+    Serial.println("Not connected to WiFi");
+    connectWiFi();
+  }
+}
+
+void connectWiFi() {
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Connecting to WiFi...");
+  }
+  Serial.println("Connected to WiFi");
+}
+
+void controlManualMode(DynamicJsonDocument& jsonDoc) {
+  int pumpStatus = jsonDoc["Pump_G"];
+  int lightStatus = jsonDoc["Light_G"];
+  int fanStatus = jsonDoc["Fan_G"];
+  int doorStatus = jsonDoc["Door_G"];
+  int heaterStatus = jsonDoc["Heater_G"];
+  int humidifierStatus = jsonDoc["Humidifier"];
+  // Control devices based on received commands for Greenhouse
+  digitalWrite(pumpPin, pumpStatus == 1 ? HIGH : LOW);
+  digitalWrite(lightControlPin, lightStatus == 1 ? HIGH : LOW);
+  digitalWrite(fanPin, fanStatus == 1 ? HIGH : LOW);
+  digitalWrite(doorPin, doorStatus == 1 ? HIGH : LOW);
+  digitalWrite(heaterPin, heaterStatus == 1 ? HIGH : LOW);
+  digitalWrite(humidifierPin, humidifierStatus == 1 ? HIGH : LOW);
+  Serial.println("Greenhouse Manual Mode: Controls updated based on manual commands.");
+}
+
+void controlAutoMode() {
+  // Fetch sensor trigger values from server
+  HTTPClient http;
+  http.begin("https://farmautomation400.site/fetch_sensor.php");
+  int httpResponseCode = http.GET();
+
+  if (httpResponseCode > 0) {
+    String response = http.getString();
+    Serial.print("Auto Control Trigger Response: ");
+    Serial.println(response);
+
+    DynamicJsonDocument jsonDoc(1024);
+    deserializeJson(jsonDoc, response);
+
+    int soilMoisture = analogRead(soilMoisturePin);
+    int temperature = dht.readTemperature();
+    int humidity = dht.readHumidity();
+    int lightLevel = analogRead(lightPin);
+
+    // Loop through sensor data and apply control logic
+    for (JsonObject sensor : jsonDoc.as<JsonArray>()) {
+      const char* sensorName = sensor["sensor_name"];
+      int minValue = sensor["min_value"];
+      int maxValue = sensor["max_value"];
+
+      if (strcmp(sensorName, "soilMoisture") == 0) {
+        if (soilMoisture < minValue) {
+          digitalWrite(pumpPin, HIGH);  // Turn on pump
+        } else if (soilMoisture > maxValue) {
+          digitalWrite(pumpPin, LOW);  // Turn off pump
+        }
+      } else if (strcmp(sensorName, "temperature") == 0) {
+        if (temperature > maxValue) {
+          digitalWrite(fanPin, HIGH);  // Turn on fan
+        } else if (temperature < minValue) {
+          digitalWrite(fanPin, LOW);  // Turn off fan
+        }
+      }
+    }
+
+    Serial.println("Greenhouse Auto Mode: Controls updated based on sensor readings.");
+  } else {
+    Serial.println("Error in fetching sensor triggers for Auto Mode.");
+  }
+
+  http.end();
+}
+
+void sendControlStatus() {
+  // Read control states for the Greenhouse
+
+  int pumpStatus = digitalRead(pumpPin);
+  int lightStatus = digitalRead(lightControlPin);
+  int fanStatus = digitalRead(fanPin);
+  int doorStatus = digitalRead(doorPin);
+  int heaterStatus = digitalRead(heaterPin);
+  int humidifierStatus=digitalRead(humidifierPin);
+
+  // Create JSON object to store the control states
+  DynamicJsonDocument jsonDoc(256);
+  
+  jsonDoc["Pump_G"] = pumpStatus;
+  jsonDoc["Light_G"] = lightStatus;
+  jsonDoc["Fan_G"] = fanStatus;
+  jsonDoc["Door_G"] = doorStatus;
+  jsonDoc["Heater_G"] = heaterStatus;
+  jsonDoc["Humidifier"]= humidifierStatus;
+
+  // Convert JSON object to string
+  String jsonString;
+  serializeJson(jsonDoc, jsonString);
+
+  // Send control status to the server
+  HTTPClient http;
+  http.begin(controlUpdateUrl);
+  http.addHeader("Content-Type", "application/json");
+
+  int httpResponseCode = http.POST(jsonString);
+  if (httpResponseCode > 0) {
+    String response = http.getString();
+    Serial.println("Control status sent, response: ");
+    Serial.println(response);
+  } else {
+    Serial.printf("Failed to send control status, error: %s\n", http.errorToString(httpResponseCode).c_str());
+  }
+
+  http.end();
+}
+
